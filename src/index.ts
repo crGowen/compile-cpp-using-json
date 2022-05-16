@@ -70,7 +70,7 @@ function generateCommand(cppsInput: string[], flInput: string[], out:string): st
     const fl = (flInput).join(" ");
     const [name] = out.split(".");
 
-    return `cl ${cpps} ${fl} /link /out:${name}.exe && del *.obj`;
+    return `cl ${cpps} ${fl} /link /out:${name}.exe & del *.obj`;
 };
 
 function parseFlags(fl: string[]) {
