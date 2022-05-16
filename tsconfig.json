@@ -1,0 +1,19 @@
+{
+    "compilerOptions":{
+        "allowUnreachableCode": false,
+        "allowUnusedLabels": false,
+        "alwaysStrict": true,
+        "noImplicitAny": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "strict": true,
+        "outDir": "./output/",
+        "removeComments": true,
+        "module": "CommonJS",
+        "lib": [],
+        "target": "ES6",
+    },
+    "include": [
+        "./src/*.ts"
+    ]
+}

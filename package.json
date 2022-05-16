@@ -1,0 +1,16 @@
+{
+  "name": "compile-cpp-using-json",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "~17.0.33"
+  },
+  "scripts": {
+    "build": "tsc && xcopy assets output /s /y /q"
+  },
+  "author": "CR Gowen",
+  "license": "ISC",
+  "private": true
+}

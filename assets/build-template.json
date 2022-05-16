@@ -1,0 +1,9 @@
+{
+    "cppFiles": [
+        "src/"
+    ],
+    "flags": [
+        "default"
+    ],
+    "output": "file.exe"
+}
