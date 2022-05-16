@@ -3,10 +3,8 @@ import { readFileSync, existsSync, statSync, readdirSync } from 'fs';
 
 type BuildProfile = {
     "cppFiles": string[];
-    /*
     "include": string[];
     "hFile": string;
-    */
     "flags": string[];
     "output": string;
 };
@@ -25,9 +23,10 @@ function run(dryRun: string | undefined): void {
     };
 
     const cppFolders:string[] = build.cppFiles.map(x =>generatePaths(x)).flat().map(x => x + '/*.cpp');
+    const includes:string[] = build.include.map(x => x[-1] === "/" ? x.slice(0,1) : x);
     const flags:string[] = parseFlags(build.flags);
 
-    const res = generateCommand(cppFolders, flags, build.output);
+    const res = generateCommand(cppFolders, includes, flags, build.output, build.hFile);
 
     dryRun !== 'dry-run'
         ? exec(res, (_, stdout) => console.log(stdout))
@@ -37,8 +36,11 @@ function run(dryRun: string | undefined): void {
 function verifyBuildFile(buildFile: BuildProfile): buildFile is BuildProfile {
     return Array.isArray(buildFile.cppFiles)
         && typeof buildFile.cppFiles[0] === "string"
+        && Array.isArray(buildFile.include)
+        && (!buildFile.include.length || typeof buildFile.include[0] === "string")
         && Array.isArray(buildFile.flags)
-        && typeof buildFile.flags[0] === "string"
+        && (!buildFile.flags.length || typeof buildFile.flags[0] === "string")
+        && typeof buildFile.hFile === "string"
         && typeof buildFile.output === "string";
 }
 
@@ -64,13 +66,17 @@ function generatePaths (path: string): string[] {
     return paths;
 };
 
-function generateCommand(cppsInput: string[], flInput: string[], out:string): string {
+function generateCommand(cppsInput: string[], inclInput:string[], flInput: string[], out:string, head:string): string {
     const cpps = cppsInput.join(" ");
-    //const incl = (inclInput || []).map(x => x.slice(-1) === "/" ? x.slice(0, -1) : x).join(" ");
+    const incl = (inclInput || []).map(x => x.slice(-1) === "/" ? x.slice(0, -1) : x).join(" ");
     const fl = (flInput).join(" ");
-    const [name] = out.split(".");
+    const output = out.replaceAll("/", '\\');
+    const outDir = output.split('\\').slice(0, -1).join('\\');
 
-    return `cl ${cpps} ${fl} /link /out:${name}.exe & del *.obj`;
+    const inclCmd = incl ? `/I ${incl}` : '';
+
+    const copyHeadCmd = false && head ? `& echo D | xcopy ${head} ${outDir}` : "";
+    return `cl ${cpps} ${inclCmd} ${fl} /Fe: ${output} ${copyHeadCmd} & del *.obj`;
 };
 
 function parseFlags(fl: string[]) {

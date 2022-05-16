@@ -10,7 +10,7 @@
         "outDir": "./output/",
         "removeComments": true,
         "module": "CommonJS",
-        "lib": [],
+        "lib": ["esnext"],
         "target": "ES6",
     },
     "include": [

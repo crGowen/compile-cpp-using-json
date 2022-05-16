@@ -1,1 +1,1 @@
-(cl || "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64) && node %~dp0\index.js %1
+(cl || "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64) && node %~dp0index.js %1

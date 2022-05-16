@@ -2,6 +2,10 @@
     "cppFiles": [
         "src/"
     ],
+    "include": [
+        "lib"
+    ],
+    "hFile": "",
     "flags": [
         "default"
     ],
