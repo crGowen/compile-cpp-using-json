@@ -1,19 +1,21 @@
 import { exec } from 'child_process';
-import { readFileSync, existsSync, statSync, readdirSync } from 'fs';
+import { readFileSync } from 'fs';
 
 type BuildProfile = {
-    "cppFiles": string[];
-    "include": string[];
-    "hFile": string;
-    "flags": string[];
-    "output": string;
+    cppDirs: string[];
+    flags: string[];
+    include: string;
+    lib: string;
+    dll: string;
+    hFile: string;
+    output: string;
 };
 
-const dryRun = process.argv[2];
+const dryRun = process.argv[2] === 'dry-run';
 
 run(dryRun);
 
-function run(dryRun: string | undefined): void {
+function run(dryRun: boolean): void {
     const fileData:string = readFileSync('./build.json', 'utf8');
     const build: BuildProfile = JSON.parse(fileData);
 
@@ -22,69 +24,57 @@ function run(dryRun: string | undefined): void {
         return;
     };
 
-    const cppFolders:string[] = build.cppFiles.map(x =>generatePaths(x)).flat().map(x => x + '/*.cpp');
-    const includes:string[] = build.include.map(x => x[-1] === "/" ? x.slice(0,1) : x);
-    const flags:string[] = parseFlags(build.flags);
+    const cpps:string = build.cppDirs.map(x => x.replaceAll("/", "\\"))
+        .map(x => x[-1] === "\\" ? x.slice(0,1) : x)
+        .map(x => x + '\\*.cpp')
+        .join(" ");
 
-    const res = generateCommand(cppFolders, includes, flags, build.output, build.hFile);
+    const flags:string = build.flags.map(x => x[0] && x[0] === "/" ? x : "/" + x)
+        .join(" ");
 
-    dryRun !== 'dry-run'
-        ? exec(res, (_, stdout) => console.log(stdout))
-        : console.log(res);
-}
+    const lib:string = build.lib.replaceAll("/", "\\");
+    const links:string = lib ? lib + "\\*.lib" : "";
+
+    const dlls:string = build.dll.replaceAll("/", "\\");
+        
+    const include:string = build.include.replaceAll("/", "\\");
+
+    const hFile:string = build.hFile.replaceAll("/", "\\");
+
+    const out:string = build.output.replaceAll("/", "\\");
+
+    const res = generateCommand(cpps, include, links, dlls, flags, out, hFile);
+
+    dryRun
+        ? console.log(res)
+        : exec(res, (_, stdout) => console.log(stdout));
+};
 
 function verifyBuildFile(buildFile: BuildProfile): buildFile is BuildProfile {
-    return Array.isArray(buildFile.cppFiles)
-        && typeof buildFile.cppFiles[0] === "string"
-        && Array.isArray(buildFile.include)
-        && (!buildFile.include.length || typeof buildFile.include[0] === "string")
-        && Array.isArray(buildFile.flags)
-        && (!buildFile.flags.length || typeof buildFile.flags[0] === "string")
-        && typeof buildFile.hFile === "string"
-        && typeof buildFile.output === "string";
-}
+    const checkStrArry = (x:any, required = false) =>  Array.isArray(x) && ((!required && !x.length) || typeof x[0] === "string");
+    const checkStrs = (x:any[]) => x.reduce((prev: boolean, curr: any) => prev && typeof curr === "string", true);
 
-function getFolders(path: string): string[] {
-    return existsSync(path) && statSync(path).isDirectory() ? readdirSync(path).filter( f => statSync(`${path}/${f}`).isDirectory() ) : [];
+    return checkStrArry(buildFile.cppDirs, true)
+        && checkStrArry(buildFile.flags)
+        && checkStrs([
+            buildFile.dll,
+            buildFile.lib,
+            buildFile.hFile,
+            buildFile.include,
+            buildFile.output
+        ]);
 };
 
-function getFoldersRecursive(path: string): string[] {
-    const foundFolders: string[] = getFolders(path).map(x => `${path}/${x}`);
+function generateCommand(cpps: string, include:string, links:string, dlls:string, flags: string, out:string, hFile:string): string {
+    const outDir = out.split("\\").slice(0, -1).join('\\');
+    const filetypeRaw = out.split(".").slice(-1)[0];
+    const fileType = filetypeRaw === 'exe' || filetypeRaw === 'dll' ? filetypeRaw : 'exe';
 
-    const subFolders: string[] = foundFolders.map(f => getFoldersRecursive(f)).flat();
-    return [...foundFolders, ...subFolders];
+    const includeCmd = include ? `/I ${include}` : "";
+    const dllFlag = fileType === 'dll' ? "/LD /DMAKE_DLL" : "";
+    const cleanUpDllStuff = dllFlag ? `& cd ${outDir} && del *.exp` : ""; 
+    const copyHeadCmd = hFile ? `&& echo D | xcopy /y ${hFile} ${outDir}` : "";
+    const copyDllsCmd = dlls ? `&& echo D | xcopy /y ${dlls} ${outDir}` : "";
+
+    return `mkdir ${outDir} & cl ${cpps} ${links} ${includeCmd} ${flags} ${dllFlag} /Fe: ${out} ${copyHeadCmd} ${copyDllsCmd} & del *.obj ${cleanUpDllStuff}`;
 };
-
-function generatePaths (path: string): string[] {
-    const arr:string[] = path.split('**');  
-    const pre:string = arr[0].slice(-1) === "/" ? arr[0].slice(0, -1) : arr[0];  
-    
-    const paths:string[] =  arr.length === 1
-        ? [pre]
-        : [pre, ...getFoldersRecursive(pre)];
-
-    return paths;
-};
-
-function generateCommand(cppsInput: string[], inclInput:string[], flInput: string[], out:string, head:string): string {
-    const cpps = cppsInput.join(" ");
-    const incl = (inclInput || []).map(x => x.slice(-1) === "/" ? x.slice(0, -1) : x).join(" ");
-    const fl = (flInput).join(" ");
-    const output = out.replaceAll("/", '\\');
-    const outDir = output.split('\\').slice(0, -1).join('\\');
-
-    const inclCmd = incl ? `/I ${incl}` : '';
-
-    const copyHeadCmd = false && head ? `& echo D | xcopy ${head} ${outDir}` : "";
-    return `cl ${cpps} ${inclCmd} ${fl} /Fe: ${output} ${copyHeadCmd} & del *.obj`;
-};
-
-function parseFlags(fl: string[]) {
-    if (fl.length < 1) return ['/EHsc'];
-
-    const newFlags = fl.map(x => x[0] && x[0] === "/" ? x : "/" + x);
-    const i = newFlags.indexOf('/default');
-    if (i !== -1) newFlags[i] = '/EHsc';
-
-    return newFlags;
-}

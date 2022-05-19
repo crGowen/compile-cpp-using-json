@@ -1,13 +1,13 @@
 {
-    "cppFiles": [
-        "src/"
+    "cppDirs": [
+        "src"
     ],
-    "include": [
-        "lib"
-    ],
-    "hFile": "",
     "flags": [
-        "default"
+        "/EHsc"
     ],
+    "include": "src/include",
+    "lib": "src/lib",
+    "dll": "src/dll",
+    "hFile": "",
     "output": "file.exe"
 }
