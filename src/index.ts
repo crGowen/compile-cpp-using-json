@@ -42,7 +42,7 @@ function run(dryRun: boolean): void {
 
 function cleanCppPaths(paths: string[]) {
     return paths.map(x => x.replaceAll("/", "\\"))
-    .map(x => x[-1] === "\\" ? x.slice(0,1) : x)
+    .map(x => x[x.length-1] === "\\" ? x.slice(0,1) : x)
     .map(x => x + '\\*.cpp')
     .join(" ");
 };
@@ -59,7 +59,7 @@ function cleanStringParam(str: string, fileType: string) {
     if (str === "") return "";
 
     var x = str.replaceAll("/", "\\");
-    x = x[-1] === "\\" ? x.slice(0,1) : x;
+    x = x[x.length-1] === "\\" ? x.slice(0,1) : x;
     x = x + "\\*." + fileType;
 
     return x;
