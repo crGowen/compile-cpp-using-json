@@ -71,7 +71,7 @@ function generateCommand(cpps: string, include:string, links:string, dlls:string
     const fileType = filetypeRaw === 'exe' || filetypeRaw === 'dll' ? filetypeRaw : 'exe';
 
     const includeCmd = include ? `/I ${include}` : "";
-    const dllFlag = fileType === 'dll' ? "/LD /DMAKE_DLL" : "";
+    const dllFlag = fileType === 'dll' ? "/LD" : "";
     const cleanUpDllStuff = dllFlag ? `& cd ${outDir} && del *.exp` : ""; 
     const copyHeadCmd = hFile ? `&& echo D | xcopy /y ${hFile} ${outDir}` : "";
     const copyDllsCmd = dlls ? `&& echo D | xcopy /y ${dlls} ${outDir}` : "";
