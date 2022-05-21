@@ -24,33 +24,45 @@ function run(dryRun: boolean): void {
         return;
     };
 
-    const cpps:string = build.cppDirs.map(x => x.replaceAll("/", "\\"))
-        .map(x => x[-1] === "\\" ? x.slice(0,1) : x)
-        .map(x => x + '\\*.cpp')
-        .join(" ");
+    const cpps:string = cleanCppPaths(build.cppDirs);
+    const flags:string = cleanFlags(build.flags);
 
-    const flags:string = build.flags.map(x => x[0] && x[0] === "/" ? x : "/" + x)
-        .join(" ");
-
-    const lib:string = build.lib.replaceAll("/", "\\");
-    const links:string = lib ? lib + "\\*.lib" : "";
-
-    const dlls:string = build.dll.replaceAll("/", "\\")
-        .split("\\")
-        .slice(0, -1)
-        .join()
-        + "\\*.dll";
+    const lib:string = cleanStringParam(build.lib, "lib");
+    const dll:string = cleanStringParam(build.dll, "dll");
         
     const include:string = build.include.replaceAll("/", "\\");
 
     const hRaw:string = build.hFile && readFileSync(build.hFile, 'utf8');
-
     const hFile = hRaw.replaceAll('__declspec(dllexport)', '__declspec(dllimport)');
 
     const out:string = build.output.replaceAll("/", "\\");
 
-    runCommand(cpps, include, links, dlls, flags, out, hFile, dryRun);
+    runCommand(cpps, include, lib, dll, flags, out, hFile, dryRun);
+};
 
+function cleanCppPaths(paths: string[]) {
+    return paths.map(x => x.replaceAll("/", "\\"))
+    .map(x => x[-1] === "\\" ? x.slice(0,1) : x)
+    .map(x => x + '\\*.cpp')
+    .join(" ");
+};
+
+function cleanFlags(flags: string[]) {
+    return flags.map(x =>
+        x[0] && x[0] === "/"
+        ? x
+        : "/" + x)
+    .join(" ");
+};
+
+function cleanStringParam(str: string, fileType: string) {
+    if (str === "") return "";
+
+    var x = str.replaceAll("/", "\\");
+    x = x[-1] === "\\" ? x.slice(0,1) : x;
+    x = x + "\\*." + fileType;
+
+    return x;
 };
 
 function verifyBuildFile(buildFile: BuildProfile): buildFile is BuildProfile {
@@ -68,18 +80,18 @@ function verifyBuildFile(buildFile: BuildProfile): buildFile is BuildProfile {
         ]);
 };
 
-function runCommand(cpps: string, include:string, links:string, dlls:string, flags: string, out:string, hFile:string, dryRun: boolean): void {
+function runCommand(cpps: string, include:string, lib:string, dlls:string, flags: string, out:string, hFile:string, dryRun: boolean): void {
     const outDir = out.split("\\").slice(0, -1).join('\\');
     const outName = out.split("\\").slice(-1).join('').split('.')[0];
     const filetypeRaw = out.split(".").slice(-1)[0];
-    const fileType = filetypeRaw === 'exe' || filetypeRaw === 'dll' ? filetypeRaw : 'exe';
+    const fileType = filetypeRaw === 'dll' ? 'dll' : 'exe';
 
     const includeCmd = include ? `/I ${include}` : "";
     const dllFlag = fileType === 'dll' ? "/LD" : "";
     const cleanUpDllStuff = dllFlag ? `& cd ${outDir} && del *.exp` : ""; 
     const copyDllsCmd = dlls ? `&& echo D | xcopy /y ${dlls} ${outDir}` : "";
 
-    const res =`mkdir ${outDir} & cl ${cpps} ${links} ${includeCmd} ${flags} ${dllFlag} /Fe: ${out} ${copyDllsCmd} & del *.obj ${cleanUpDllStuff}`;
+    const res =`mkdir ${outDir} & cl ${cpps} ${lib} ${includeCmd} ${flags} ${dllFlag} /Fe: ${out} ${copyDllsCmd} & del *.obj ${cleanUpDllStuff}`;
 
     const doCompile = () => exec(res, (_, stdout) => {
         console.log(stdout);
