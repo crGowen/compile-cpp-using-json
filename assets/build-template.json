@@ -3,7 +3,7 @@
         "src"
     ],
     "flags": [
-        "/EHsc"
+        "EHsc"
     ],
     "include": "src/include",
     "lib": "src/lib",
