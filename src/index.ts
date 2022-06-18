@@ -42,8 +42,7 @@ function run(dryRun: boolean): void {
 
 function cleanCppPaths(paths: string[]) {
     return paths.map(x => x.replaceAll("/", "\\"))
-    .map(x => x[x.length-1] === "\\" ? x.slice(0,1) : x)
-    .map(x => x + '\\*.cpp')
+    .map(x => x + `${x[x.length-1] === "\\" ? "" : "\\"}*.cpp`)
     .join(" ");
 };
 
@@ -59,8 +58,7 @@ function cleanStringParam(str: string, fileType: string) {
     if (str === "") return "";
 
     var x = str.replaceAll("/", "\\");
-    x = x[x.length-1] === "\\" ? x.slice(0,1) : x;
-    x = x + "\\*." + fileType;
+    x = x + `${x[x.length-1] === "\\" ? "" : "\\"}*.${fileType}`;
 
     return x;
 };
